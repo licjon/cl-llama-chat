@@ -1,0 +1,35 @@
+(in-package #:tui-chat)
+
+(defun %split-words (s)
+  "Split S on runs of whitespace, dropping empties."
+  (let ((words '()) (start nil) (n (length s)))
+    (dotimes (i n)
+      (let ((ws (member (char s i) '(#\Space #\Tab #\Newline #\Return))))
+        (cond ((and (not ws) (null start)) (setf start i))
+              ((and ws start) (push (subseq s start i) words) (setf start nil)))))
+    (when start (push (subseq s start) words))
+    (nreverse words)))
+
+(defun %trim (s)
+  (string-trim '(#\Space #\Tab #\Newline #\Return) s))
+
+(defun parse-command (line)
+  (let ((trimmed (%trim line)))
+    (cond
+      ((string= trimmed "") '(:empty))
+      ((char/= (char trimmed 0) #\/) (list :say trimmed))
+      (t (let* ((words (%split-words trimmed))
+                (cmd (string-downcase (subseq (first words) 1)))
+                (args (rest words)))
+           (cond
+             ((string= cmd "help") '(:help))
+             ((or (string= cmd "quit") (string= cmd "exit")) '(:quit))
+             ((string= cmd "reset") '(:reset))
+             ((string= cmd "regen") '(:regen))
+             ((string= cmd "presets") '(:presets))
+             ((string= cmd "sampler")
+              (if args (list :set-sampler (first args))
+                  (list :error "usage: /sampler <preset>")))
+             ((string= cmd "branch")
+              (list :branch (first args) (second args)))
+             (t (list :unknown cmd))))))))
