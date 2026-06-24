@@ -1,8 +1,7 @@
 (in-package #:tui-chat)
 
 (defstruct (engine (:constructor make-engine*))
-  config model ctx session default-sampler
-  (seed-counter 0))
+  config model ctx session default-sampler)
 
 (defun make-engine (config model ctx)
   "Public factory: build an ENGINE with a fresh chat session seeded from CONFIG."
@@ -61,28 +60,24 @@ ON-TOKEN, when supplied, is called as (funcall on-token which tok) with WHICH in
                              (+ (length prompt) (config-max-tokens cfg) 64))))
     (llama:with-context (scratch model :n-ctx scratch-n-ctx)
       ;; Prefill the shared prompt exactly once.
-      (llama:with-batch (b (length prompt))
-        (llama:batch-add-sequence b prompt 0 :logits :last)
-        (llama:batch-decode scratch b))
+      (llama:prefill scratch prompt)
       (let ((snapshot (llama:save-state scratch)))
         (flet ((candidate (which name plist)
                  (llama:load-state scratch snapshot)
-                 ;; Each candidate gets its own seed (unless the preset pins one)
-                 ;; so the two branches genuinely diverge and [r]egenerate yields
-                 ;; fresh options instead of repeating the same pair.
+                 ;; Diverge unless the preset pins a seed: :random tells the C
+                 ;; sampler to draw a fresh nondeterministic seed, so the two
+                 ;; branches genuinely differ and [r]egenerate yields fresh
+                 ;; options instead of repeating the same pair.
                  (let ((cb (when on-token
-                             (lambda (tok) (funcall on-token which tok) t)))
-                       (seed (or (getf plist :seed)
-                                 (incf (engine-seed-counter engine)))))
+                             (lambda (tok) (funcall on-token which tok) t))))
                    (list :label (%branch-label which name)
                          :preset name
-                         :seed seed
                          :text (llama:generate
                                 scratch nil
                                 :prompt-tokens prompt
                                 :sampler-config (%sampler-config plist)
                                 :max-tokens (config-max-tokens cfg)
-                                :seed seed
+                                :seed (or (getf plist :seed) :random)
                                 :token-callback cb)))))
           (list (candidate :a name-a plist-a)
                 (candidate :b name-b plist-b)))))))
@@ -119,14 +114,15 @@ until the reply is committed), mirroring how branching works."
            (scratch-n-ctx (min (config-n-ctx cfg)
                                (+ (length prompt) (config-max-tokens cfg) 64)))
            (preset (engine-sampler-plist engine nil))
-           (seed (incf (engine-seed-counter engine)))
            (cb (when on-token (lambda (tok) (funcall on-token tok) t)))
+           ;; :random forces a fresh nondeterministic seed so the redo differs
+           ;; from the reply being replaced (overriding any seed the preset pins).
            (reply (llama:with-context (scratch model :n-ctx scratch-n-ctx)
                     (llama:generate scratch nil
                                     :prompt-tokens prompt
                                     :sampler-config (%sampler-config preset)
                                     :max-tokens (config-max-tokens cfg)
-                                    :seed seed
+                                    :seed :random
                                     :token-callback cb))))
       ;; Commit: swap in the new reply (user turn already present).
       (setf (llama:chat-session-messages session)
