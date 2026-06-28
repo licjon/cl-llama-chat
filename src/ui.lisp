@@ -9,7 +9,8 @@
   (format out "  /sampler NAME    set the default sampler preset~%")
   (format out "  /presets         list sampler presets~%")
   (format out "  /reset           clear the conversation~%")
-  (format out "  /help            this help    /quit  exit~%"))
+  (format out "  /help            this help~%")
+  (format out "  /quit            exit~%"))
 
 (defun print-presets (engine out)
   (let ((cfg (engine-config engine)))
@@ -28,43 +29,69 @@
       (write-string tok out)
       (force-output out))))
 
+(defparameter *branch-width* 100)
+
 (defun %do-branch (engine text a b out)
-  "Generate, stream, then show A/B columns and commit the user's pick."
-  (let* ((cands
-           (engine-branch
-            engine text a b
-            :on-token
-            (let ((cb-a nil) (cb-b nil))
-              (lambda (which tok)
-                (case which
-                  (:a (unless cb-a
-                        (format out "~&~a~%"
-                                (colorize "── candidate A ──" +yellow+))
-                        (setf cb-a t))
-                      (write-string tok out) (force-output out))
-                  (:b (unless cb-b
-                        (format out "~&~%~a~%"
-                                (colorize "── candidate B ──" +yellow+))
-                        (setf cb-b t))
-                      (write-string tok out) (force-output out)))))))
-         (ca (first cands)) (cb (second cands)))
-    (terpri out)
-    (write-string (format-two-columns
-                   (getf ca :text) (getf cb :text)
-                   :width 100
-                   :header-left (getf ca :label)
-                   :header-right (getf cb :label))
-                  out)
-    (format out "~&Pick [a]/[b], [r]egenerate, [d]iscard: ")
-    (force-output out)
-    (let ((choice (string-downcase (%trim (or (read-line *standard-input* nil "d") "d")))))
-      (cond
-        ((string= choice "a") (engine-commit engine text (getf ca :text))
-                              (format out "~&~a~%" (colorize "committed A" +dim+)))
-        ((string= choice "b") (engine-commit engine text (getf cb :text))
-                              (format out "~&~a~%" (colorize "committed B" +dim+)))
-        ((string= choice "r") (%do-branch engine text a b out))
-        (t (format out "~&~a~%" (colorize "discarded" +dim+)))))))
+  "Generate A/B candidates, showing each column as it completes.
+Column A is displayed immediately after generation; column B fills in beside it
+using ANSI cursor movement."
+  (let ((left-lines 0))
+    (let* ((cands
+             (engine-branch
+              engine text a b
+              :on-token
+              (let ((a-toks (make-array 0 :element-type 'character
+                                          :adjustable t :fill-pointer 0))
+                    (left-printed nil))
+                (lambda (which tok)
+                  (case which
+                    (:a (loop for c across tok
+                              do (vector-push-extend c a-toks)))
+                    (:b (unless left-printed
+                          (setf left-printed t)
+                          (multiple-value-bind (text lines)
+                              (format-left-column
+                               (copy-seq a-toks)
+                               :width *branch-width*
+                               :header-left (%branch-label
+                                             :a (or a
+                                                    (engine-default-sampler engine)))
+                               :header-right (%branch-label
+                                              :b (or b
+                                                     (engine-default-sampler engine))))
+                            (setf left-lines lines)
+                            (terpri out)
+                            (write-string text out)
+                            (force-output out)))))))))
+           (ca (first cands)) (cb (second cands)))
+      ;; Fill in right column using cursor movement
+      (if (plusp left-lines)
+          (progn
+            (write-string (fill-right-column
+                           (getf cb :text) left-lines
+                           :width *branch-width*)
+                          out)
+            (force-output out))
+          ;; Fallback if left column was never printed (shouldn't happen)
+          (progn
+            (terpri out)
+            (write-string (format-two-columns
+                           (getf ca :text) (getf cb :text)
+                           :width *branch-width*
+                           :header-left (getf ca :label)
+                           :header-right (getf cb :label))
+                          out)))
+      (format out "~&Pick [a]/[b], [r]egenerate, [d]iscard: ")
+      (force-output out)
+      (let ((choice (string-downcase
+                     (%trim (or (read-line *standard-input* nil "d") "d")))))
+        (cond
+          ((string= choice "a") (engine-commit engine text (getf ca :text))
+                                (format out "~&~a~%" (colorize "committed A" +dim+)))
+          ((string= choice "b") (engine-commit engine text (getf cb :text))
+                                (format out "~&~a~%" (colorize "committed B" +dim+)))
+          ((string= choice "r") (%do-branch engine text a b out))
+          (t (format out "~&~a~%" (colorize "discarded" +dim+))))))))
 
 (defun run-ui (engine &key (in *standard-input*) (out *standard-output*))
   (let ((*standard-input* in))
