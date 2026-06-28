@@ -1,4 +1,4 @@
-(defpackage #:tui-chat
+(defpackage #:cl-llama-chat
   (:use #:cl)
   (:local-nicknames (#:llama #:cl-llama-cpp))
   (:export #:main #:run))

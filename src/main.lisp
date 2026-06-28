@@ -1,4 +1,4 @@
-(in-package #:tui-chat)
+(in-package #:cl-llama-chat)
 
 (defun silence-llama-logging ()
   "Suppress llama.cpp / ggml log spam (model-load chatter, 'CUDA Graph id N

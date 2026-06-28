@@ -1,4 +1,4 @@
-(in-package #:tui-chat)
+(in-package #:cl-llama-chat)
 
 (defstruct (engine (:constructor make-engine*))
   config model ctx session default-sampler)

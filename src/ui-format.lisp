@@ -1,4 +1,4 @@
-(in-package #:tui-chat)
+(in-package #:cl-llama-chat)
 
 (defparameter +reset+  (format nil "~c[0m" #\Escape))
 (defparameter +cyan+   (format nil "~c[36m" #\Escape))

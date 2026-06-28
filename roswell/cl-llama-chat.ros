@@ -5,12 +5,12 @@ exec ros -Q -- $0 "$@"
 |#
 (progn ;; init forms
   (ros:ensure-asdf)
-  #+quicklisp (ql:quickload :tui-chat :silent t))
+  #+quicklisp (ql:quickload :cl-llama-chat :silent t))
 
-(defpackage :ros.script.tui-chat
+(defpackage :ros.script.cl-llama-chat
   (:use :cl))
-(in-package :ros.script.tui-chat)
+(in-package :ros.script.cl-llama-chat)
 
 (defun main (&rest argv)
   (declare (ignore argv))
-  (tui-chat:main))
+  (cl-llama-chat:main))

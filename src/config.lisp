@@ -1,4 +1,4 @@
-(in-package #:tui-chat)
+(in-package #:cl-llama-chat)
 
 (defstruct config
   (model-path (merge-pathnames "models/qwen2.5-14b-instruct-q4_k_m.gguf"
@@ -22,7 +22,7 @@
 (defun config-file-path ()
   (let ((base (or (uiop:getenv "XDG_CONFIG_HOME")
                   (merge-pathnames ".config/" (user-homedir-pathname)))))
-    (merge-pathnames "tui-chat/config.lisp" (uiop:ensure-directory-pathname base))))
+    (merge-pathnames "cl-llama-chat/config.lisp" (uiop:ensure-directory-pathname base))))
 
 (defun parse-config (plist)
   "Build a CONFIG by overlaying PLIST onto the defaults."
@@ -53,7 +53,7 @@
       (progn
         (ensure-directories-exist path)
         (with-open-file (s path :direction :output :if-does-not-exist :create)
-          (format s ";;; tui-chat configuration. Edited as a Lisp plist.~%")
+          (format s ";;; cl-llama-chat configuration. Edited as a Lisp plist.~%")
           (format s ";;; With :auto-resources t, :n-ctx and :n-gpu-layers are ceilings —~%")
           (format s ";;; cl-llama-cpp sizes them to fit free VRAM. Set it to nil to use~%")
           (format s ";;; the values below verbatim.~%")

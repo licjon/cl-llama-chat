@@ -1,4 +1,4 @@
-(in-package #:tui-chat)
+(in-package #:cl-llama-chat)
 
 (defun %split-words (s)
   "Split S on runs of whitespace, dropping empties."

@@ -1,4 +1,4 @@
-(in-package #:tui-chat)
+(in-package #:cl-llama-chat)
 
 (defparameter *prompt* "you> ")
 
@@ -68,7 +68,7 @@
 
 (defun run-ui (engine &key (in *standard-input*) (out *standard-output*))
   (let ((*standard-input* in))
-    (format out "~&tui-chat — /help for commands.~%")
+    (format out "~&cl-llama-chat — /help for commands.~%")
     (loop
       (format out "~&~a" (colorize *prompt* +cyan+)) (force-output out)
       (let ((line (read-line in nil :eof)))

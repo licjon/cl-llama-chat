@@ -1,4 +1,4 @@
-* Tui-Chat
+* Cl-Llama-Chat
 
 A small terminal LLM chat application built on [[https://github.com/licjon/cl-llama-cpp][cl-llama-cpp]].
 
@@ -20,27 +20,27 @@ found automatically under =~/.roswell/local-projects/=).
 
 *** Run with Roswell (recommended)
 
-Install a =tui-chat= command onto your =PATH= (=~/.roswell/bin/=):
+Install a =cl-llama-chat= command onto your =PATH= (=~/.roswell/bin/=):
 
 #+begin_src bash
-ros install tui-chat
-tui-chat
+ros install cl-llama-chat
+cl-llama-chat
 #+end_src
 
 Or run it directly without installing:
 
 #+begin_src bash
-ros -s tui-chat -e '(tui-chat:main)' -q
+ros -s cl-llama-chat -e '(cl-llama-chat:main)' -q
 #+end_src
 
 *** Run with SBCL
 
 #+begin_src bash
-sbcl --eval '(asdf:load-system :tui-chat)' --eval '(tui-chat:main)'
+sbcl --eval '(asdf:load-system :cl-llama-chat)' --eval '(cl-llama-chat:main)'
 #+end_src
 
 On first run a default config is written to
-=$XDG_CONFIG_HOME/tui-chat/config.lisp= (fallback =~/.config/tui-chat/config.lisp=).
+=$XDG_CONFIG_HOME/cl-llama-chat/config.lisp= (fallback =~/.config/cl-llama-chat/config.lisp=).
 Edit it to set your model path and tweak sampler presets:
 
 #+begin_src lisp
