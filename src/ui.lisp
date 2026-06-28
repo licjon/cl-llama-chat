@@ -9,7 +9,8 @@
   (format out "  /sampler NAME    set the default sampler preset~%")
   (format out "  /presets         list sampler presets~%")
   (format out "  /reset           clear the conversation~%")
-  (format out "  /help            this help    /quit  exit~%"))
+  (format out "  /help            this help~%")
+  (format out "  /quit            exit~%"))
 
 (defun print-presets (engine out)
   (let ((cfg (engine-config engine)))
