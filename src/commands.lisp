@@ -32,4 +32,5 @@
                   (list :error "usage: /sampler <preset>")))
              ((string= cmd "branch")
               (list :branch (first args) (second args)))
+             ((string= cmd "bench") '(:bench))
              (t (list :unknown cmd))))))))

@@ -27,5 +27,8 @@
   (ok (equal (cl-llama-chat::parse-command "/branch balanced creative")
              '(:branch "balanced" "creative"))))
 
+(deftest bench
+  (ok (equal (cl-llama-chat::parse-command "/bench") '(:bench))))
+
 (deftest unknown
   (ok (equal (cl-llama-chat::parse-command "/wat now") '(:unknown "wat"))))
