@@ -72,7 +72,8 @@
           (format s "           (\"wild\"     :temp 1.9 :top-p 0.98 :min-p 0.02)~%")
           (format s "           (\"precise\"  :temp 0.2))~%")
           (format s " :default-sampler \"balanced\"~%")
-          (format s " ;; :speculative :ngram :speculative-n 4 :speculative-m 48)~%"))
+          (format s " ;; :speculative :ngram :speculative-n 4 :speculative-m 48~%")
+          (format s ")~%"))
         (values path t))))
 
 (defun config-preset (config name)
