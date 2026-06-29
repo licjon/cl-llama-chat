@@ -2,7 +2,8 @@
   :version "0.1.0"
   :author "licjon"
   :license ""
-  :depends-on ("cl-llama-cpp")
+  :depends-on ("cl-llama-cpp"
+               "cl-llama-cpp-extras/speculative")
   :components ((:module "src"
                 :serial t
                 :components ((:file "packages")

@@ -1,14 +1,46 @@
 (in-package #:cl-llama-chat)
 
 (defstruct (engine (:constructor make-engine*))
-  config model ctx session default-sampler)
+  config model ctx session default-sampler spec-ctx speculative-fns)
+
+(defun %build-speculative-context (config)
+  "Create a speculative context and closure plist from CONFIG.
+Returns (values spec-ctx speculative-fns)."
+  (spec:with-speculative-params (p)
+    (spec:speculative-params-add-type p spec:+speculative-type-ngram-simple+)
+    (spec:speculative-params-set-ngram-n p (config-speculative-n config))
+    (spec:speculative-params-set-ngram-m p (config-speculative-m config))
+    (let ((sctx (spec:make-speculative-context p)))
+      (values sctx
+              (list :begin-fn  (lambda (seq-id prompt-tokens)
+                                 (spec:speculative-begin sctx seq-id prompt-tokens))
+                    :draft-fn  (lambda (&key seq-id n-past id-last prompt-tokens)
+                                 (spec:speculative-draft sctx
+                                   :seq-id seq-id :n-past n-past
+                                   :id-last id-last
+                                   :prompt-tokens prompt-tokens))
+                    :accept-fn (lambda (seq-id n-accepted)
+                                 (spec:speculative-accept sctx seq-id n-accepted)))))))
 
 (defun make-engine (config model ctx)
   "Public factory: build an ENGINE with a fresh chat session seeded from CONFIG."
   (let ((session (llama:make-chat-session
                   ctx :system-prompt (config-system-prompt config))))
-    (make-engine* :config config :model model :ctx ctx :session session
-                  :default-sampler (config-default-sampler config))))
+    (multiple-value-bind (spec-ctx spec-fns)
+        (when (eq (config-speculative config) :ngram)
+          (%build-speculative-context config))
+      (make-engine* :config config :model model :ctx ctx :session session
+                    :default-sampler (config-default-sampler config)
+                    :spec-ctx spec-ctx :speculative-fns spec-fns))))
+
+(defun free-engine-speculative (engine)
+  "Free the engine's speculative context if any. Idempotent."
+  (let ((sctx (engine-spec-ctx engine)))
+    (when sctx
+      (spec:free-speculative-context sctx)
+      (setf (engine-spec-ctx engine) nil
+            (engine-speculative-fns engine) nil)))
+  nil)
 
 (defun engine-sampler-plist (engine name)
   "Resolve NAME (string) to a sampler plist, or the current default when NIL."
@@ -25,13 +57,15 @@
 ON-TOKEN, when supplied, is called with each token string as it streams."
   (let* ((preset (engine-sampler-plist engine nil))
          (cb (when on-token
-               (lambda (tok) (funcall on-token tok) t))))
+               (lambda (tok) (funcall on-token tok) t)))
+         (spec-fns (engine-speculative-fns engine)))
     (values
      (llama:chat-session-send
       (engine-session engine) text
       :sampler-config (%sampler-config preset)
       :max-tokens (config-max-tokens (engine-config engine))
-      :token-callback cb))))
+      :token-callback cb
+      :speculative-fns spec-fns))))
 
 (defun %branch-label (which preset-name)
   (format nil "~a: ~a" (if (eq which :a) "A" "B") preset-name))
@@ -78,7 +112,8 @@ ON-TOKEN, when supplied, is called as (funcall on-token which tok) with WHICH in
                                 :sampler-config (%sampler-config plist)
                                 :max-tokens (config-max-tokens cfg)
                                 :seed (or (getf plist :seed) :random)
-                                :token-callback cb)))))
+                                :token-callback cb
+                                :speculative-fns (engine-speculative-fns engine))))))
           (list (candidate :a name-a plist-a)
                 (candidate :b name-b plist-b)))))))
 
@@ -123,7 +158,8 @@ until the reply is committed), mirroring how branching works."
                                     :sampler-config (%sampler-config preset)
                                     :max-tokens (config-max-tokens cfg)
                                     :seed :random
-                                    :token-callback cb))))
+                                    :token-callback cb
+                                    :speculative-fns (engine-speculative-fns engine)))))
       ;; Commit: swap in the new reply (user turn already present).
       (setf (llama:chat-session-messages session)
             (append base-msgs (list (list :role "assistant" :content reply))))
