@@ -33,4 +33,5 @@
              ((string= cmd "branch")
               (list :branch (first args) (second args)))
              ((string= cmd "bench") '(:bench))
+             ((string= cmd "stats") '(:stats))
              (t (list :unknown cmd))))))))

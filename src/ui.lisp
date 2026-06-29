@@ -9,6 +9,7 @@
   (format out "  /sampler NAME    set the default sampler preset~%")
   (format out "  /presets         list sampler presets~%")
   (format out "  /bench           benchmark speculative decoding~%")
+  (format out "  /stats           show speculative decoding stats~%")
   (format out "  /reset           clear the conversation~%")
   (format out "  /help            this help~%")
   (format out "  /quit            exit~%"))
@@ -94,6 +95,19 @@ using ANSI cursor movement."
           ((string= choice "r") (%do-branch engine text a b out))
           (t (format out "~&~a~%" (colorize "discarded" +dim+))))))))
 
+(defun %do-stats (engine out)
+  (let ((n-draft (engine-spec-n-draft engine))
+        (n-accepted (engine-spec-n-accepted engine)))
+    (if (and (zerop n-draft) (null (engine-speculative-fns engine)))
+        (format out "~&~a~%"
+                (colorize "Speculative decoding not configured." +yellow+))
+        (let ((accept-pct (if (plusp n-draft)
+                              (* 100.0d0 (/ n-accepted n-draft))
+                              0.0d0)))
+          (format out "~&Speculative decoding (session):~%")
+          (format out "  drafts: ~d  accepted: ~d  accept%%: ~,1f%%~%"
+                  n-draft n-accepted accept-pct)))))
+
 (defstruct spec-stats
   (n-draft 0 :type fixnum)
   (n-accepted 0 :type fixnum))
@@ -121,7 +135,7 @@ N-TOKENS is the count of generated tokens (from the third return value of genera
                              (+ (length prompt-tokens) max-tokens 64)))
          (start (get-internal-real-time))
          (n-tokens 0))
-    (llama:with-context (scratch model :n-ctx scratch-n-ctx)
+    (llama:with-context (scratch model :n-ctx scratch-n-ctx :n-batch scratch-n-ctx)
       (multiple-value-bind (text stop result-tokens)
           (llama:generate scratch nil
                           :prompt-tokens prompt-tokens
@@ -193,6 +207,7 @@ N-TOKENS is the count of generated tokens (from the third return value of genera
             (:bench
              (handler-case (%do-bench engine out)
                (error (e) (format out "~&~a~%" (colorize (princ-to-string e) +yellow+)))))
+            (:stats (%do-stats engine out))
             (:reset (engine-reset engine)
                     (format out "~&~a~%" (colorize "conversation cleared" +dim+)))
             (:set-sampler

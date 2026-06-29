@@ -84,15 +84,17 @@ supports (=:temp=, =:top-k=, =:top-p=, =:min-p=, =:mirostat=, =:xtc-probability=
 
 *** Commands
 
-| Command         | Effect                                           |
-|-----------------+--------------------------------------------------|
-| (plain text)    | Send a normal chat turn                          |
-| =/branch [A] [B]= | Compare two replies to your next message         |
-| =/sampler NAME=   | Change the persistent default sampler preset     |
-| =/presets=        | List the configured sampler presets              |
-| =/reset=          | Clear the conversation (keeps the system prompt) |
-| =/help=           | Show the command list                            |
-| =/quit= / =/exit=   | Exit                                             |
+| Command            | Effect                                           |
+|--------------------+--------------------------------------------------|
+| (plain text)       | Send a normal chat turn                          |
+| =/branch [A] [B]=  | Compare two replies to your next message         |
+| =/regen=           | Re-roll the last assistant reply                 |
+| =/sampler NAME=    | Change the persistent default sampler preset     |
+| =/presets=         | List the configured sampler presets              |
+| =/bench=           | Benchmark speculative decoding                   |
+| =/reset=           | Clear the conversation (keeps the system prompt) |
+| =/help=            | Show the command list                            |
+| =/quit= / =/exit=  | Exit                                             |
 
 =/branch= with no preset names uses the current default for both candidates
 (useful for pure same-sampler branching); give one or two preset names to

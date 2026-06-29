@@ -1,7 +1,9 @@
 (in-package #:cl-llama-chat)
 
 (defstruct (engine (:constructor make-engine*))
-  config model ctx session default-sampler spec-ctx speculative-fns)
+  config model ctx session default-sampler spec-ctx speculative-fns
+  (spec-n-draft 0 :type fixnum)
+  (spec-n-accepted 0 :type fixnum))
 
 (defun %build-speculative-context (config)
   "Create a speculative context and closure plist from CONFIG.
@@ -22,16 +24,34 @@ Returns (values spec-ctx speculative-fns)."
                     :accept-fn (lambda (seq-id n-accepted)
                                  (spec:speculative-accept sctx seq-id n-accepted)))))))
 
+(defun %wrap-spec-fns-for-engine (fns engine)
+  "Wrap draft-fn and accept-fn to accumulate stats on ENGINE."
+  (when fns
+    (let ((orig-draft  (getf fns :draft-fn))
+          (orig-accept (getf fns :accept-fn)))
+      (list :begin-fn (getf fns :begin-fn)
+            :draft-fn (lambda (&rest args)
+                        (let ((drafts (apply orig-draft args)))
+                          (incf (engine-spec-n-draft engine) (length drafts))
+                          drafts))
+            :accept-fn (lambda (seq-id n-accepted)
+                         (incf (engine-spec-n-accepted engine) n-accepted)
+                         (funcall orig-accept seq-id n-accepted))))))
+
 (defun make-engine (config model ctx)
   "Public factory: build an ENGINE with a fresh chat session seeded from CONFIG."
   (let ((session (llama:make-chat-session
                   ctx :system-prompt (config-system-prompt config))))
-    (multiple-value-bind (spec-ctx spec-fns)
+    (multiple-value-bind (spec-ctx raw-fns)
         (when (eq (config-speculative config) :ngram)
           (%build-speculative-context config))
-      (make-engine* :config config :model model :ctx ctx :session session
-                    :default-sampler (config-default-sampler config)
-                    :spec-ctx spec-ctx :speculative-fns spec-fns))))
+      (let ((engine (make-engine* :config config :model model :ctx ctx
+                                  :session session
+                                  :default-sampler (config-default-sampler config)
+                                  :spec-ctx spec-ctx)))
+        (setf (engine-speculative-fns engine)
+              (%wrap-spec-fns-for-engine raw-fns engine))
+        engine))))
 
 (defun free-engine-speculative (engine)
   "Free the engine's speculative context if any. Idempotent."
