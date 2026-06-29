@@ -25,3 +25,16 @@
   (let ((c (cl-llama-chat::parse-config
             '(:presets (("hot" :temp 1.5)) :default-sampler "hot"))))
     (ok (equal (getf (cl-llama-chat::config-default-preset c) :temp) 1.5))))
+
+(deftest speculative-config-defaults
+  (let ((c (cl-llama-chat::default-config)))
+    (ok (null (cl-llama-chat::config-speculative c)))
+    (ok (= (cl-llama-chat::config-speculative-n c) 4))
+    (ok (= (cl-llama-chat::config-speculative-m c) 48))))
+
+(deftest speculative-config-parse
+  (let ((c (cl-llama-chat::parse-config
+            '(:speculative :ngram :speculative-n 5 :speculative-m 64))))
+    (ok (eq (cl-llama-chat::config-speculative c) :ngram))
+    (ok (= (cl-llama-chat::config-speculative-n c) 5))
+    (ok (= (cl-llama-chat::config-speculative-m c) 64))))
