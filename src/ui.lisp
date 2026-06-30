@@ -105,7 +105,7 @@ using ANSI cursor movement."
                               (* 100.0d0 (/ n-accepted n-draft))
                               0.0d0)))
           (format out "~&Speculative decoding (session):~%")
-          (format out "  drafts: ~d  accepted: ~d  accept%%: ~,1f%%~%"
+          (format out "  drafts: ~d  accepted: ~d  accept%: ~,1f%~%"
                   n-draft n-accepted accept-pct)))))
 
 (defstruct spec-stats
