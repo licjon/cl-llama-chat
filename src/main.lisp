@@ -52,7 +52,9 @@ N-CTX / N-GPU-LAYERS to free VRAM when :auto-resources is true. Returns
       (unwind-protect
            (llama:with-context (ctx model :n-ctx n-ctx)
              (format t "~&Ready — n-ctx ~d, ~d GPU layers. /help for commands.~%" n-ctx gpu)
-             (run-ui (make-engine cfg model ctx)))
+             (let ((engine (make-engine cfg model ctx)))
+               (unwind-protect (run-ui engine)
+                 (free-engine-speculative engine))))
         (llama:free-model model))))
   nil)
 

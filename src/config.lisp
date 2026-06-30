@@ -15,7 +15,10 @@
              ("creative" :temp 1.4 :top-p 0.95 :min-p 0.05)
              ("wild"     :temp 1.9 :top-p 0.98 :min-p 0.02)
              ("precise"  :temp 0.2)))
-  (default-sampler "balanced"))
+  (default-sampler "balanced")
+  (speculative nil)
+  (speculative-n 4)
+  (speculative-m 48))
 
 (defun default-config () (make-config))
 
@@ -36,7 +39,10 @@
         (:system-prompt   (setf (config-system-prompt c) v))
         (:max-tokens      (setf (config-max-tokens c) v))
         (:presets         (setf (config-presets c) v))
-        (:default-sampler (setf (config-default-sampler c) v))))
+        (:default-sampler (setf (config-default-sampler c) v))
+        (:speculative     (setf (config-speculative c) v))
+        (:speculative-n   (setf (config-speculative-n c) v))
+        (:speculative-m   (setf (config-speculative-m c) v))))
     c))
 
 (defun load-config (&optional (path (config-file-path)))
@@ -65,7 +71,9 @@
           (format s "           (\"creative\" :temp 1.4 :top-p 0.95 :min-p 0.05)~%")
           (format s "           (\"wild\"     :temp 1.9 :top-p 0.98 :min-p 0.02)~%")
           (format s "           (\"precise\"  :temp 0.2))~%")
-          (format s " :default-sampler \"balanced\")~%"))
+          (format s " :default-sampler \"balanced\"~%")
+          (format s " ;; :speculative :ngram :speculative-n 4 :speculative-m 48~%")
+          (format s ")~%"))
         (values path t))))
 
 (defun config-preset (config name)
