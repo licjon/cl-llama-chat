@@ -2,6 +2,8 @@
 
 A small terminal LLM chat application built on [[https://github.com/licjon/cl-llama-cpp][cl-llama-cpp]].
 
+[[file:chat_screenshot.png]]
+
 Normal chat is a single scrolling transcript with streamed replies. The standout
 feature is *side-by-side branch/sampler comparison*: from any point you spawn two
 alternate assistant replies — each optionally using a different sampler preset —
