@@ -191,12 +191,27 @@ N-TOKENS is the count of generated tokens (from the third return value of genera
                     (format out "  speedup: ~,2fx~%" (/ spec-tps base-tps))
                     (format out "  speedup: N/A~%")))))))))
 
+(defun read-user-input (in)
+  "Read user input, accumulating multiple lines when text is pasted.
+Detects buffered input via LISTEN and joins it into a single string."
+  (let ((first-line (read-line in nil :eof)))
+    (when (eq first-line :eof) (return-from read-user-input :eof))
+    (if (not (listen in))
+        first-line
+        (with-output-to-string (buf)
+          (write-string first-line buf)
+          (loop while (listen in)
+                do (write-char #\Newline buf)
+                   (let ((next (read-line in nil nil)))
+                     (when (null next) (return))
+                     (write-string next buf)))))))
+
 (defun run-ui (engine &key (in *standard-input*) (out *standard-output*))
   (let ((*standard-input* in))
     (format out "~&cl-llama-chat — /help for commands.~%")
     (loop
       (format out "~&~a" (colorize *prompt* +cyan+)) (force-output out)
-      (let ((line (read-line in nil :eof)))
+      (let ((line (read-user-input in)))
         (when (eq line :eof) (return))
         (destructuring-bind (kind &rest args) (parse-command line)
           (case kind
