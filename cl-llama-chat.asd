@@ -3,7 +3,7 @@
   :author "licjon"
   :license ""
   :depends-on ("cl-llama-cpp"
-               "cl-llama-cpp-extras/speculative")
+               "cl-llama-cpp/common/speculative")
   :components ((:module "src"
                 :serial t
                 :components ((:file "packages")
